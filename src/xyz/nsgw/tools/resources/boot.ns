@@ -1,0 +1,19 @@
+target boot
+set MachineFolder$
+initiate MachineFolder$
+set Logo$
+set Specs$
+show Logo$
+show Specs$
+set Time$
+show Time$
+setFor 1 intro ("Welcome to NOS. The time is $Time$")
+show intro
+# The line above sets the local variable 'intro' to the string "Welcome to NOS" for one executable line after it.
+# Variables:
+# System variables are referred to by using their identifier followed by a $
+# When a variable is used in a string, the identifier follows another $ (regardless of it being a system variable).
+# When a variable is used in a command (e.g. set, initiate, show), it is referred to with its raw name
+# (followed by an $ if applicable)
+# Lines starting with hashtags (#) are comments.
+# The target command can only be used with a fixed set of values. These are: boot, shutdown
