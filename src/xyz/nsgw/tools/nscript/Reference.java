@@ -2,7 +2,7 @@ package xyz.nsgw.tools.nscript;
 
 public class Reference {
 
-    private String identifier;
+    private final String identifier;
 
     private String value;
 
@@ -10,9 +10,9 @@ public class Reference {
         this.identifier = identifier.stripTrailing();
     }
 
-    public Reference(String identifier, String argument) {
+    public Reference(String identifier, String value) {
         this.identifier = identifier.stripLeading().stripTrailing();
-        this.value = argument.stripLeading().stripTrailing();
+        this.value = value.stripLeading().stripTrailing();
     }
 
     public String getValue() {
@@ -25,9 +25,5 @@ public class Reference {
 
     public void setValue(String value) {
         this.value = value.stripLeading().stripTrailing();
-    }
-
-    public void setIdentifier(String identifier) {
-        this.identifier = identifier.stripLeading().stripTrailing();
     }
 }

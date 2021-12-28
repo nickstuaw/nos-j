@@ -1,8 +1,14 @@
 target boot
 set MachineFolder\ NOS
-initiate_target MachineFolder\
+set UserFolder\ Users
+set ScriptFolder\ Scripts
 set Logo\
 set Time\
+initiate_target with MachineFolder\
+show Booting from /MachineFolder...
 show Welcome to NOS! The time is /Time
-take name with Name:
-show Hello, your name is /name and welcome!
+take name with User: space
+make regular user with /name
+show Hello, welcome to NOS, /name!
+show The machine folder is /MachineFolder and the users are in /UserFolder.
+shutdown

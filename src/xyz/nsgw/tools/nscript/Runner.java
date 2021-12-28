@@ -1,159 +1,172 @@
 package xyz.nsgw.tools.nscript;
 
+import xyz.nsgw.Main;
 import xyz.nsgw.tools.Reader;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class Runner {
+public class Runner extends Thread {
 
-    private String[] lines;
+    private final ThreadLocal<Integer> lockIdLocal;
 
-    private boolean ready = false;
+    private final ThreadLocal<Boolean> cancelLocal;
 
-    private VariableHandler variables;
+    private final ThreadLocal<File> scriptLocal;
 
-    private List<String> values;
+    private final ThreadLocal<VariableHandler> variablesLocal;
 
-    private int nextValueIndex;
-
-    private int tokenIndex;
-
-    private String lastCompletedValue;
-
-    public Runner() {
-        resetVariables();
+    public Runner(final File script, final int lockId) {
+        // Use ThreadLocal for thread safety (to reduce cache contention between CPUs)
+        scriptLocal = ThreadLocal.withInitial(()->script);
+        cancelLocal = ThreadLocal.withInitial(()->false);
+        lockIdLocal = ThreadLocal.withInitial(()->lockId);
+        variablesLocal = ThreadLocal.withInitial(VariableHandler::new);
     }
 
-    public Runner(final File script) {
-        resetVariables();
-        safelyInterpret(script);
+    @Override
+    public void run() {
+        String[] lines = safelyInterpret(scriptLocal.get());
+        for(String line : lines) {
+            if(cancelLocal.get()) break;
+            if(!executeLine(line)) {
+                System.out.println("An error occurred!");
+                break;
+            }
+        }
+        Main.getScriptHandler().unlock(lockIdLocal.get());
     }
 
-    public void resetVariables() {
-        variables = new VariableHandler();
-    }
-
-    private void interpret(final File file) throws IOException {
+    private String[] interpret(final File file) throws IOException {
         BufferedReader reader = new BufferedReader(new FileReader(file));
         List<String> ls = new ArrayList<>();
         for(String line = reader.readLine(); line != null; line = reader.readLine()) {
             ls.add(line);
         }
-        lines = ls.toArray(String[]::new);
-        ready = true;
+        return ls.toArray(String[]::new);
     }
 
-    public boolean safelyInterpret(final File script) {
+    public String[] safelyInterpret(final File script) {
         if(script.exists()) {
             if(script.isFile()) {
                 if(script.getName().endsWith(".ns")) {
                     try {
-                        interpret(script);
-                        return true;
-                    } catch(IOException ignored) {
-                        ignored.printStackTrace();
-                    }
+                        return interpret(script);
+                    } catch(IOException ignored) {}
                 }
             }
         }
-        return false;
+        return new String[]{};
     }
 
-    public void run(final File script) {
-        if(!ready) {
-            if(!safelyInterpret(script))
-                return;
-        }
-        run();
-    }
-
-    public void run() {
-        for(String line : lines) {
-            runLine(line);
-        }
-    }
-
-    private void runLine(final String line) {
-        String[] spaced = line.split(" ");
-        values = new ArrayList<>();
-        String value;
-        boolean readingValue = false;
+    private boolean executeLine(final String line) {
+        VariableHandler variables = variablesLocal.get();
         char[] chars = line.toCharArray();
         Reference reference = null;
         StringBuilder builder = new StringBuilder();
         boolean reading = false;
         for(int i = 0; i < chars.length; i++) {
             switch(chars[i]) {
-                case '#':
-                    if(i == 0)
+                case '#' -> {
+                    if (i == 0)
                         i = chars.length;
-                    break;
-                case '(':
-                    if(!builder.isEmpty()) {
+                }
+                case '(' -> {
+                    if (!builder.isEmpty()) {
                         reference = new Reference(builder.toString());
                         builder = new StringBuilder();
                         reading = true;
                     }
-                    break;
-                case ')':
-                    if(!builder.isEmpty()) {
+                }
+                case ')' -> {
+                    if (!builder.isEmpty()) {
                         assert reference != null;
                         reference.setValue(builder.toString());
                         //...
                         builder = new StringBuilder();
                         reading = false;
                     }
-                    break;
-                case ' ':
-                    if(reading)
-                        break;
-                    if(!builder.isEmpty()) {
+                }
+                case ' ' -> {
+                    if (!reading && !builder.isEmpty()) {
+                        String[] remaining;
                         reference = new Reference(builder.toString(), line.substring(i + 1));
+                        remaining = line.substring(i + 1).split(" ");
                         switch (reference.getIdentifier()) {
-                            case "target":
-                                variables.setTarget(reference.getValue());
-                                break;
-                            case "initiate_target":
-                                variables.initiateTarget(reference.getValue());
-                                break;
-                            case "set":
-                                String id = reference.getValue().split(" ")[0];
-                                if(id.endsWith("\\")) {
-                                    variables.setVariable(id.substring(0,id.length() - 1), reference.getValue().length() > id.length() + 1 ? reference.getValue().substring(id.length() + 1) : "");
+                            case "target" -> variables.setTarget(reference.getValue());
+                            case "initiate_target" -> {
+                                if (remaining.length > 2) {
+                                    if (Objects.equals(remaining[1], "with")) {
+                                        variables.initiateTarget(remaining[2]);
+                                    }
+                                }
+                            }
+                            case "set" -> {
+                                String id = remaining[0];
+                                if (id.endsWith("\\")) {
+                                    return variables.setVariable(id.substring(0, id.length() - 1), reference.getValue().length() > id.length() + 1 ? reference.getValue().substring(id.length() + 1) : "");
                                 } else {
                                     variables.setLocal(id, reference.getValue().substring(id.length() + 1));
                                 }
-                                break;
-                            case "show":
-                                System.out.println(variables.fillIn(reference.getValue()));
-                                break;
-                            case "take":
-                                String[] remaining = reference.getValue().split(" ");
-                                if(remaining.length > 2) {
-                                    if(Objects.equals(remaining[1], "with")) {
-                                        System.out.print(remaining[2]);
+                            }
+                            case "reset" -> {
+                                if(remaining.length > 0) {
+                                    if(remaining[0].equals("variables")) {
+                                        variables.reset();
+                                    }
+                                }
+                            }
+                            case "show" -> System.out.println(variables.fillIn(reference.getValue()));
+                            case "take" -> {
+                                if (remaining.length > 2) {
+                                    if (Objects.equals(remaining[1], "with")) {
+                                        String suffix = "";
+                                        if(remaining.length > 3) {
+                                            if(Objects.equals(remaining[3], "space")) {
+                                                suffix = " ";
+                                            }
+                                        }
+                                        System.out.print(remaining[2] + suffix);
                                     }
                                 }
                                 Reader reader = new Reader();
                                 variables.setLocal(remaining[0], reader.str());
-                                break;
+                            }
+                            case "make" -> {
+                                if (remaining.length > 2) {
+                                    if(remaining[1].equals("user")) {
+                                        if(remaining[2].equals("regular")) {
+                                            if(remaining.length > 3) {
+                                                if(remaining[3].equals("with")) {
+                                                    variables.fillIn(remaining[4]);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        i = chars.length;
                     }
-                    break;
-                case '=':
-                    if(!builder.isEmpty()) {
+                }
+                case '=' -> {
+                    if (!builder.isEmpty()) {
                         reference = new Reference(builder.toString(), line.substring(i + 1));
-                        i = chars.length;
+                        variables.setLocal(reference);
+                        return true;
                     }
-                    break;
-                default:
-                    builder.append(chars[i]);
-                    continue;
+                }
+                default -> builder.append(chars[i]);
             }
         }
+        switch(builder.toString()) {
+            case "shutdown" -> Main.getScriptHandler().endQueue();
+            case "cancel" -> cancelLocal.set(true);
+        }
+        return true;
     }
 }

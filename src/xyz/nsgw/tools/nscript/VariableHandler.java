@@ -1,7 +1,6 @@
 package xyz.nsgw.tools.nscript;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 
@@ -11,17 +10,19 @@ public class VariableHandler {
 
     private File workingDir;
 
-    private File machineFolder;
+    private File machineFolder, userFolder, scriptFolder;
 
     private File logo;
-
-    private String specs;
 
     private Date time;
 
     private HashMap<String, String> locals = new HashMap<>();
 
     public VariableHandler() {}
+
+    public void reset() {
+        locals = new HashMap<>();
+    }
 
     public void setTarget(final String target1) {
         switch(target1) {
@@ -30,27 +31,37 @@ public class VariableHandler {
         }
     }
 
-    public Target getTarget() {
-        return this.target;
-    }
-
     public void initiateTarget(final String arg) {
         if(target == Target.BOOT) {
             machineFolder = new File(arg);
         }
     }
 
-    public void setVariable(final String var, final String val) {
+    public boolean setVariable(final String var, final String val) {
         switch (var) {
             case "MachineFolder" -> {
                 machineFolder = new File(val);
                 if(!machineFolder.exists())
-                    machineFolder.mkdirs();
+                    return machineFolder.mkdirs();
+            }
+            case "UserFolder" -> {
+                userFolder = new File(machineFolder, val);
+                if(!userFolder.exists())
+                    return userFolder.mkdirs();
+            }
+            case "ScriptFolder" -> {
+                scriptFolder = new File(machineFolder, val);
+                if(!scriptFolder.exists())
+                    return scriptFolder.mkdirs();
             }
             case "Logo" -> logo = new File(machineFolder, "logo.ns");
-            case "Specs" -> specs = "WIP";
             case "Time" -> time = new Date();
         }
+        return true;
+    }
+
+    public void setLocal(final Reference reference) {
+        locals.put(reference.getIdentifier(), reference.getValue());
     }
 
     public void setLocal(final String id, final String val) {
@@ -63,8 +74,9 @@ public class VariableHandler {
 
     public String fillIn(String out) {
         out = out.replaceAll("/MachineFolder", machineFolder.getName());
-        out = out.replaceAll("/Logo", logo.getAbsolutePath());
-        out = out.replaceAll("/Specs", "WIP");
+        out = out.replaceAll("/UserFolder", userFolder.getName());
+        out = out.replaceAll("/ScriptFolder", userFolder.getName());
+        out = out.replaceAll("/Logo", logo.getName());
         out = out.replaceAll("/Time", time.toString());
         for(String key : locals.keySet()) {
             out = out.replaceAll("/" + key, locals.get(key));
@@ -72,13 +84,20 @@ public class VariableHandler {
         return out;
     }
 
-    public String getVariable(final String var) {
-        return switch (var) {
-            case "MachineFolder" -> machineFolder.getAbsolutePath();
-            case "Logo" -> logo.getAbsolutePath();
-            case "Specs" -> specs;
-            default -> null;
-        };
+    public File getMachineFolder() {
+        return machineFolder;
+    }
+
+    public File getScriptFolder() {
+        return scriptFolder;
+    }
+
+    public File getUserFolder() {
+        return userFolder;
+    }
+
+    public File getLogo() {
+        return logo;
     }
 
     public void setWorkingDir(File workingDir) {
