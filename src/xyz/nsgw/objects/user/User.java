@@ -1,4 +1,4 @@
-package xyz.nsgw.objects;
+package xyz.nsgw.objects.user;
 
 public class User extends UserFileManager {
 
@@ -7,9 +7,7 @@ public class User extends UserFileManager {
     public User(final String name) {
         this.name = name;
         setHomeName(this.name);
-        if(!ensureHomeExistence()) {
-            System.out.println("An error occurred: home directory could not be created. Please make it manually.");
-        }
+        ensureHomeExistence();
     }
 
     public void renameTo(final String name) {

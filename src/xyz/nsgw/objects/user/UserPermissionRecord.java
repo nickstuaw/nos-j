@@ -1,4 +1,4 @@
-package xyz.nsgw.objects;
+package xyz.nsgw.objects.user;
 
 import java.util.ArrayList;
 import java.util.List;

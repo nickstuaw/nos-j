@@ -1,5 +1,7 @@
 package xyz.nsgw.tools.nscript;
 
+import xyz.nsgw.Main;
+
 import java.io.File;
 import java.util.Date;
 import java.util.HashMap;
@@ -10,7 +12,7 @@ public class VariableHandler {
 
     private File workingDir;
 
-    private File machineFolder, userFolder, scriptFolder;
+    private File scriptFolder;
 
     private File logo;
 
@@ -33,28 +35,28 @@ public class VariableHandler {
 
     public void initiateTarget(final String arg) {
         if(target == Target.BOOT) {
-            machineFolder = new File(arg);
+            Main.setFolder(new File(arg));
         }
     }
 
     public boolean setVariable(final String var, final String val) {
         switch (var) {
             case "MachineFolder" -> {
-                machineFolder = new File(val);
-                if(!machineFolder.exists())
-                    return machineFolder.mkdirs();
+                Main.setFolder(new File(val));
+                if(!Main.getFolder().exists())
+                    return Main.getFolder().mkdirs();
             }
             case "UserFolder" -> {
-                userFolder = new File(machineFolder, val);
-                if(!userFolder.exists())
-                    return userFolder.mkdirs();
+                Main.setUserFolder(new File(Main.getFolder(), val));
+                if(!Main.getUserFolder().exists())
+                    return Main.getUserFolder().mkdirs();
             }
             case "ScriptFolder" -> {
-                scriptFolder = new File(machineFolder, val);
+                scriptFolder = new File(Main.getFolder(), val);
                 if(!scriptFolder.exists())
                     return scriptFolder.mkdirs();
             }
-            case "Logo" -> logo = new File(machineFolder, "logo.ns");
+            case "Logo" -> logo = new File(Main.getFolder(), "logo.ns");
             case "Time" -> time = new Date();
         }
         return true;
@@ -73,9 +75,9 @@ public class VariableHandler {
     }
 
     public String fillIn(String out) {
-        out = out.replaceAll("/MachineFolder", machineFolder.getName());
-        out = out.replaceAll("/UserFolder", userFolder.getName());
-        out = out.replaceAll("/ScriptFolder", userFolder.getName());
+        out = out.replaceAll("/MachineFolder", Main.getFolder().getName());
+        out = out.replaceAll("/UserFolder", Main.getUserFolder().getName());
+        out = out.replaceAll("/ScriptFolder", Main.getUserFolder().getName());
         out = out.replaceAll("/Logo", logo.getName());
         out = out.replaceAll("/Time", time.toString());
         for(String key : locals.keySet()) {
@@ -85,7 +87,7 @@ public class VariableHandler {
     }
 
     public File getMachineFolder() {
-        return machineFolder;
+        return Main.getFolder();
     }
 
     public File getScriptFolder() {
@@ -93,7 +95,7 @@ public class VariableHandler {
     }
 
     public File getUserFolder() {
-        return userFolder;
+        return Main.getUserFolder();
     }
 
     public File getLogo() {

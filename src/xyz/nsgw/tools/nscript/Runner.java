@@ -1,6 +1,7 @@
 package xyz.nsgw.tools.nscript;
 
 import xyz.nsgw.Main;
+import xyz.nsgw.objects.user.PermissibleUser;
 import xyz.nsgw.tools.Reader;
 
 import java.io.BufferedReader;
@@ -140,11 +141,10 @@ public class Runner extends Thread {
                             case "make" -> {
                                 if (remaining.length > 2) {
                                     if(remaining[1].equals("user")) {
-                                        if(remaining[2].equals("regular")) {
+                                        if(remaining[2].equals("with")) {
                                             if(remaining.length > 3) {
-                                                if(remaining[3].equals("with")) {
-                                                    variables.fillIn(remaining[4]);
-                                                }
+                                                PermissibleUser user = new PermissibleUser(variables.fillIn(remaining[3]));
+                                                //todo: if(remaining[4].equals("regular")) {
                                             }
                                         }
                                     }
@@ -166,6 +166,10 @@ public class Runner extends Thread {
         switch(builder.toString()) {
             case "shutdown" -> Main.getScriptHandler().endQueue();
             case "cancel" -> cancelLocal.set(true);
+            case "clear_screen" -> {
+                System.out.print("\033[H\033[2J");
+                System.out.flush();
+            }
         }
         return true;
     }

@@ -1,4 +1,4 @@
-package xyz.nsgw.objects;
+package xyz.nsgw.objects.user;
 
 public class PermissibleUser extends User {
 

@@ -11,6 +11,8 @@ public class Main {
 
     private static final Reader SYS_READER = new Reader();
 
+    private static File folder, userFolder;
+
     public static void main(String[] args) {
         //Boot
         boot();
@@ -36,5 +38,21 @@ public class Main {
 
     public static ScriptRunHandler getScriptHandler() {
         return queue;
+    }
+
+    public static File getFolder() {
+        return folder;
+    }
+
+    public static void setFolder(File folder) {
+        Main.folder = folder;
+    }
+
+    public static File getUserFolder() {
+        return userFolder;
+    }
+
+    public static void setUserFolder(File folder) {
+        Main.userFolder = folder;
     }
 }
